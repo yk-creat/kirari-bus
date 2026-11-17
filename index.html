@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>溝22 喜楽里バスナビ</title>
+
+  <!-- iOS PWA (ホーム画面追加時) 設定 -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="喜楽里バス">
+  <meta name="theme-color" content="#12131a">
+
+  <style>
+    :root {
+      --bg-color: #12131a;
+      --card-bg: #1c1e29;
+      --card-inner: #252837;
+      --accent-color: #ff9f43;
+      /* サウナ・温泉の温かみ */
+      --accent-active: #ff5252;
+      --text-main: #f5f6fa;
+      --text-sub: #8e95a5;
+      --border-color: #2e3244;
+      --btn-bg: #282c3c;
+      --safe-top: env(safe-area-inset-top, 20px);
+      --safe-bottom: env(safe-area-inset-bottom, 20px);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hiragino Sans", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: calc(var(--safe-top) + 10px) 16px calc(var(--safe-bottom) + 16px);
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 12px;
+    }
+
+    .title-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .app-title {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--accent-color);
+      letter-spacing: 0.03em;
+    }
+
+    .revision-tag {
+      font-size: 0.65rem;
+      background: rgba(255, 159, 67, 0.15);
+      color: var(--accent-color);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+
+    /* 行き・帰り 切り替えトグル */
+    .direction-toggle {
+      display: flex;
+      background: var(--card-bg);
+      border-radius: 14px;
+      padding: 4px;
+      margin-bottom: 12px;
+      border: 1px solid var(--border-color);
+    }
+
+    .direction-btn {
+      flex: 1;
+      padding: 12px 6px;
+      text-align: center;
+      border-radius: 10px;
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: var(--text-sub);
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .direction-btn.active {
+      background: var(--accent-color);
+      color: #12131a;
+      box-shadow: 0 4px 14px rgba(255, 159, 67, 0.4);
+    }
+
+    /* 曜日切り替えバー */
+    .day-selector {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .day-btn {
+      padding: 6px 14px;
+      border-radius: 20px;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      color: var(--text-sub);
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .day-btn.active {
+      border-color: var(--accent-color);
+      color: var(--accent-color);
+      background: rgba(255, 159, 67, 0.08);
+    }
+
+    /* メインカウントダウンカード */
+    .main-card {
+      background: var(--card-bg);
+      border-radius: 20px;
+      padding: 22px 18px;
+      text-align: center;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--border-color);
+      margin-bottom: 14px;
+    }
+
+    .route-info {
+      font-size: 0.82rem;
+      color: var(--text-sub);
+      margin-bottom: 6px;
+    }
+
+    .dep-time-badge {
+      display: inline-block;
+      font-size: 1.3rem;
+      font-weight: 800;
+      background: rgba(255, 159, 67, 0.15);
+      color: var(--accent-color);
+      padding: 4px 14px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      letter-spacing: 0.02em;
+    }
+
+    .countdown-label {
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      color: var(--text-sub);
+      margin-bottom: 4px;
+    }
+
+    .countdown-timer {
+      font-size: 3.3rem;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+    }
+
+    .countdown-timer .unit {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text-sub);
+      margin-left: 2px;
+      margin-right: 6px;
+    }
+
+    .status-msg {
+      margin-top: 10px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--accent-color);
+      min-height: 20px;
+    }
+
+    /* 直近の予定リスト */
+    .upcoming-section {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 14px 16px;
+      border: 1px solid var(--border-color);
+      margin-bottom: 14px;
+      flex-grow: 1;
+    }
+
+    .upcoming-header {
+      font-size: 0.8rem;
+      color: var(--text-sub);
+      font-weight: 700;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .upcoming-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .upcoming-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 12px;
+      background: var(--card-inner);
+      border-radius: 10px;
+      font-size: 0.95rem;
+    }
+
+    .upcoming-item.first {
+      border-left: 3px solid var(--accent-color);
+    }
+
+    .upcoming-item .time {
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .upcoming-item .diff {
+      font-size: 0.85rem;
+      color: var(--text-sub);
+      font-weight: 600;
+    }
+
+    /* 公式直リンクボタングループ */
+    .link-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .official-link-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: #1e3799;
+      color: #ffffff;
+      text-decoration: none;
+      padding: 13px;
+      border-radius: 12px;
+      font-size: 0.92rem;
+      font-weight: 700;
+      box-shadow: 0 4px 12px rgba(30, 55, 153, 0.35);
+      transition: opacity 0.2s;
+    }
+
+    .official-link-btn:active {
+      opacity: 0.8;
+    }
+
+    .official-sublink-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      background: var(--btn-bg);
+      color: #82ccdd;
+      text-decoration: none;
+      padding: 10px;
+      border-radius: 10px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      border: 1px solid var(--border-color);
+    }
+
+    .now-indicator {
+      font-size: 0.72rem;
+      color: var(--text-sub);
+      text-align: center;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <div class="title-row">
+      <span class="app-title">♨️ 溝22 喜楽里バスナビ</span>
+      <span class="revision-tag">2025.7.1 改定</span>
+    </div>
+  </header>
+
+  <!-- 行き・帰り切り替え -->
+  <div class="direction-toggle">
+    <div class="direction-btn active" id="btn-outbound" onclick="setDirection('outbound')">
+      行き：駅 ➔ 喜楽里
+    </div>
+    <div class="direction-btn" id="btn-inbound" onclick="setDirection('inbound')">
+      帰り：喜楽里 ➔ 駅
+    </div>
+  </div>
+
+  <!-- 曜日手動切り替え -->
+  <div class="day-selector">
+    <button class="day-btn" id="day-weekday" onclick="setDayType('weekday')">平日</button>
+    <button class="day-btn" id="day-saturday" onclick="setDayType('saturday')">土曜</button>
+    <button class="day-btn" id="day-holiday" onclick="setDayType('holiday')">休日</button>
+  </div>
+
+  <!-- メインカウントダウン -->
+  <div class="main-card">
+    <div class="route-info" id="route-desc">溝の口駅南口 5番のりば発 ➔ 橘小学校</div>
+    <div class="dep-time-badge" id="dep-time">--:-- 発</div>
+    <div class="countdown-label">次のバスまで</div>
+    <div class="countdown-timer" id="timer-display">
+      --<span class="unit">分</span>--<span class="unit">秒</span>
+    </div>
+    <div class="status-msg" id="status-msg"></div>
+  </div>
+
+  <!-- 直近数本 -->
+  <div class="upcoming-section">
+    <div class="upcoming-header">
+      <span>直近の出発予定（最大5本）</span>
+      <span id="day-label">平日ダイヤ</span>
+    </div>
+    <div class="upcoming-list" id="upcoming-list">
+      <!-- JSで動的生成 -->
+    </div>
+  </div>
+
+  <!-- 公式バスナビリンク -->
+  <div class="link-group">
+    <a id="official-link" href="https://tokyu.bus-location.jp/" target="_blank" rel="noopener"
+      class="official-link-btn">
+      <span>📡 東急バスナビ（公式・接近情報）を開く</span>
+    </a>
+    <a href="https://transfer.navitime.biz/tokyubus/smart/" target="_blank" rel="noopener" class="official-sublink-btn">
+      <span>🔍 系統・のりば検索画面（NAVITIME版）</span>
+    </a>
+  </div>
+
+  <div class="now-indicator" id="current-clock">現在時刻 --:--:--</div>
+
+  <script>
+    /*
+      東急バス【溝22】公式時刻表（2025年7月1日改定 最新ダイヤ完全反映）
+      ソース：東急バス公式PDF
+      ・行き：溝の口駅南口 5番のりば発（蟹ヶ谷ゆき・橘小学校経由）
+      ・帰り：橘小学校 のりばa発（溝の口駅南口ゆき）
+    */
+    const timetableData = {
+      outbound: {
+        title: "行き：溝の口駅南口（5番のりば） ➔ 橘小学校",
+        navitimeUrl: "https://transfer.navitime.biz/tokyubus/smart/location/BusLocationResult?startId=00240668",
+        weekday: [
+          "06:02", "06:11", "06:17", "06:23", "06:29", "06:35", "06:41", "06:47", "06:53", "06:59",
+          "07:05", "07:11", "07:17", "07:23", "07:29", "07:35", "07:41", "07:47", "07:53", "07:59",
+          "08:05", "08:11", "08:17", "08:23", "08:29", "08:35", "08:41", "08:48", "08:57",
+          "09:06", "09:15", "09:24", "09:34", "09:45", "09:56",
+          "10:07", "10:18", "10:29", "10:40", "10:51",
+          "11:02", "11:13", "11:24", "11:35", "11:46", "11:57",
+          "12:08", "12:19", "12:30", "12:41", "12:52",
+          "13:03", "13:14", "13:25", "13:36", "13:47", "13:58",
+          "14:08", "14:18", "14:28", "14:38", "14:48", "14:58",
+          "15:07", "15:16", "15:25", "15:34", "15:43", "15:52",
+          "16:01", "16:10", "16:19", "16:28", "16:37", "16:45", "16:53",
+          "17:01", "17:09", "17:17", "17:25", "17:33", "17:41", "17:49", "17:57",
+          "18:05", "18:13", "18:21", "18:29", "18:37", "18:45", "18:53",
+          "19:01", "19:09", "19:17", "19:26", "19:36", "19:46", "19:56",
+          "20:06", "20:16", "20:26", "20:36", "20:45", "20:54",
+          "21:05", "21:18", "21:31", "21:45", "21:57",
+          "22:08", "22:19", "22:31", "22:45"
+        ],
+        saturday: [
+          "06:09", "06:22", "06:35", "06:48",
+          "07:01", "07:14", "07:26", "07:37", "07:48",
+          "08:00", "08:11", "08:23", "08:35", "08:46", "08:58",
+          "09:10", "09:23", "09:35", "09:48",
+          "10:00", "10:13", "10:25", "10:36", "10:46", "10:56",
+          "11:07", "11:17", "11:28", "11:38", "11:49",
+          "12:00", "12:11", "12:21", "12:32", "12:42", "12:53",
+          "13:04", "13:15", "13:25", "13:36", "13:46", "13:57",
+          "14:08", "14:19", "14:29", "14:40", "14:50",
+          "15:01", "15:12", "15:23", "15:33", "15:44", "15:54",
+          "16:05", "16:16", "16:27", "16:37", "16:48", "16:58",
+          "17:09", "17:20", "17:31", "17:41", "17:52",
+          "18:02", "18:13", "18:24", "18:34", "18:45", "18:56",
+          "19:08", "19:20", "19:32", "19:44", "19:56",
+          "20:09", "20:23", "20:38", "20:53",
+          "21:08", "21:23", "21:38",
+          "22:04", "22:30"
+        ],
+        holiday: [
+          "06:09", "06:25", "06:43",
+          "07:00", "07:17", "07:35", "07:53",
+          "08:11", "08:24", "08:36", "08:49",
+          "09:02", "09:15", "09:28", "09:41", "09:54",
+          "10:06", "10:18", "10:30", "10:42", "10:54",
+          "11:06", "11:18", "11:29", "11:40", "11:51",
+          "12:01", "12:11", "12:21", "12:31", "12:41", "12:52",
+          "13:02", "13:13", "13:23", "13:34", "13:44", "13:55",
+          "14:05", "14:16", "14:26", "14:37", "14:47", "14:58",
+          "15:08", "15:19", "15:29", "15:40", "15:50",
+          "16:01", "16:11", "16:22", "16:32", "16:43", "16:53",
+          "17:04", "17:14", "17:25", "17:35", "17:46", "17:56",
+          "18:07", "18:18", "18:29", "18:40", "18:52",
+          "19:05", "19:17", "19:30", "19:43", "19:56",
+          "20:09", "20:23", "20:38", "20:53",
+          "21:08", "21:23", "21:38",
+          "22:04", "22:30"
+        ]
+      },
+      inbound: {
+        title: "帰り：橘小学校（のりばa） ➔ 溝の口駅南口",
+        navitimeUrl: "https://transfer.navitime.biz/tokyubus/smart/location/BusLocationSearchTargetCourse?startId=00240675&poleId=000000000528",
+        weekday: [
+          "06:04", "06:17", "06:28", "06:34", "06:41", "06:47", "06:53", "06:59",
+          "07:05", "07:12", "07:18", "07:24", "07:30", "07:36", "07:42", "07:48", "07:54",
+          "08:00", "08:06", "08:12", "08:18", "08:24", "08:30", "08:36", "08:42", "08:48", "08:54",
+          "09:00", "09:06", "09:12", "09:18", "09:25", "09:31", "09:39", "09:48", "09:57",
+          "10:06", "10:17", "10:28", "10:39", "10:50",
+          "11:01", "11:12", "11:23", "11:34", "11:45", "11:56",
+          "12:07", "12:18", "12:29", "12:40", "12:51",
+          "13:02", "13:13", "13:24", "13:35", "13:46", "13:57",
+          "14:08", "14:19", "14:30", "14:41", "14:52",
+          "15:03", "15:15", "15:25", "15:35", "15:45", "15:55",
+          "16:04", "16:13", "16:22", "16:31", "16:40", "16:49", "16:57",
+          "17:05", "17:13", "17:21", "17:29", "17:37", "17:45", "17:53",
+          "18:01", "18:09", "18:17", "18:25", "18:33", "18:41", "18:49", "18:57",
+          "19:05", "19:13", "19:21", "19:29", "19:37", "19:45", "19:54",
+          "20:04", "20:14", "20:24", "20:34", "20:44", "20:54",
+          "21:03", "21:11", "21:20", "21:29", "21:40", "21:52",
+          "22:04", "22:16", "22:31", "22:50"
+        ],
+        saturday: [
+          "06:29", "06:40", "06:53",
+          "07:07", "07:22", "07:35", "07:48",
+          "08:00", "08:12", "08:23", "08:35", "08:46", "08:58",
+          "09:10", "09:22", "09:34", "09:47",
+          "10:00", "10:13", "10:26", "10:38", "10:51",
+          "11:03", "11:14", "11:25", "11:36", "11:47", "11:57",
+          "12:08", "12:18", "12:29", "12:40", "12:51",
+          "13:01", "13:12", "13:22", "13:33", "13:44", "13:55",
+          "14:05", "14:16", "14:26", "14:37", "14:48", "14:59",
+          "15:09", "15:20", "15:30", "15:41", "15:52",
+          "16:03", "16:13", "16:24", "16:34", "16:45", "16:56",
+          "17:07", "17:17", "17:28", "17:38", "17:49",
+          "18:00", "18:11", "18:20", "18:31", "18:41", "18:52",
+          "19:03", "19:13", "19:21", "19:33", "19:46", "19:58",
+          "20:10", "20:21", "20:34", "20:48",
+          "21:02", "21:15", "21:29", "21:43", "21:57",
+          "22:11", "22:38"
+        ],
+        holiday: [
+          "06:37", "06:55",
+          "07:13", "07:31", "07:49",
+          "08:07", "08:25", "08:43", "08:56",
+          "09:09", "09:22", "09:35", "09:48",
+          "10:01", "10:15", "10:28", "10:40", "10:52",
+          "11:04", "11:16", "11:28", "11:40", "11:52",
+          "12:04", "12:14", "12:25", "12:36", "12:47", "12:58",
+          "13:09", "13:19", "13:30", "13:40", "13:51",
+          "14:01", "14:12", "14:22", "14:33", "14:43", "14:54",
+          "15:04", "15:15", "15:25", "15:36", "15:46", "15:57",
+          "16:07", "16:18", "16:28", "16:39", "16:49",
+          "17:00", "17:10", "17:21", "17:31", "17:42", "17:52",
+          "18:03", "18:13", "18:24", "18:34", "18:44", "18:54",
+          "19:05", "19:17", "19:29", "19:38", "19:49",
+          "20:02", "20:16", "20:30", "20:44", "20:58",
+          "21:12", "21:26", "21:41", "21:56",
+          "22:11", "22:38"
+        ]
+      }
+    };
+
+    // 状態管理
+    let currentDirection = 'outbound';
+    let currentDayType = detectDayType();
+
+    // 曜日の自動判定
+    function detectDayType() {
+      const now = new Date();
+      const day = now.getDay(); // 0: 日曜, 6: 土曜
+      if (day === 0) return 'holiday';
+      if (day === 6) return 'saturday';
+      return 'weekday';
+    }
+
+    // 方向切り替え
+    function setDirection(dir) {
+      currentDirection = dir;
+      document.getElementById('btn-outbound').classList.toggle('active', dir === 'outbound');
+      document.getElementById('btn-inbound').classList.toggle('active', dir === 'inbound');
+      updateUI();
+    }
+
+    // 曜日切り替え
+    function setDayType(type) {
+      currentDayType = type;
+      ['weekday', 'saturday', 'holiday'].forEach(t => {
+        document.getElementById(`day-${t}`).classList.toggle('active', t === type);
+      });
+      updateUI();
+    }
+
+    // メイン更新処理
+    function updateUI() {
+      const now = new Date();
+
+      // 時計表示
+      const timeStr = now.toTimeString().split(' ')[0];
+      document.getElementById('current-clock').textContent = `現在時刻 ${timeStr}`;
+
+      const dirData = timetableData[currentDirection];
+      document.getElementById('route-desc').textContent = dirData.title;
+
+      const dayLabels = { weekday: '平日ダイヤ', saturday: '土曜ダイヤ', holiday: '休日ダイヤ' };
+      document.getElementById('day-label').textContent = dayLabels[currentDayType];
+
+      const times = dirData[currentDayType];
+      const nowSeconds = (now.getHours() * 3600) + (now.getMinutes() * 60) + now.getSeconds();
+
+      // 直近の便を探す
+      const upcoming = [];
+      for (const t of times) {
+        const [h, m] = t.split(':').map(Number);
+        const busSeconds = (h * 3600) + (m * 60);
+        if (busSeconds >= nowSeconds) {
+          upcoming.push({ timeStr: t, diffSec: busSeconds - nowSeconds });
+        }
+      }
+
+      const timerDisplay = document.getElementById('timer-display');
+      const depBadge = document.getElementById('dep-time');
+      const statusMsg = document.getElementById('status-msg');
+      const listContainer = document.getElementById('upcoming-list');
+
+      if (upcoming.length === 0) {
+        depBadge.textContent = "本日の運行終了";
+        timerDisplay.innerHTML = `--<span class="unit">分</span>--<span class="unit">秒</span>`;
+        statusMsg.textContent = "本日の便はすべて終了しました";
+        statusMsg.style.color = "var(--text-sub)";
+        listContainer.innerHTML = `<div style="text-align:center; color:var(--text-sub); padding:12px; font-size:0.85rem;">本日の出発予定はありません</div>`;
+        return;
+      }
+
+      // 次のバス
+      const nextBus = upcoming[0];
+      depBadge.textContent = `${nextBus.timeStr} 発`;
+
+      const diffMin = Math.floor(nextBus.diffSec / 60);
+      const diffSec = nextBus.diffSec % 60;
+
+      const minStr = String(diffMin).padStart(2, '0');
+      const secStr = String(diffSec).padStart(2, '0');
+
+      timerDisplay.innerHTML = `${minStr}<span class="unit">分</span>${secStr}<span class="unit">秒</span>`;
+
+      if (diffMin <= 2) {
+        statusMsg.textContent = "まもなくバスが発車します！";
+        statusMsg.style.color = "var(--accent-active)";
+        timerDisplay.style.color = "var(--accent-active)";
+      } else if (diffMin <= 5) {
+        statusMsg.textContent = "のりばへ向かいましょう";
+        statusMsg.style.color = "var(--accent-color)";
+        timerDisplay.style.color = "var(--accent-color)";
+      } else {
+        statusMsg.textContent = "";
+        timerDisplay.style.color = "var(--text-main)";
+      }
+
+      // 直近数本（最大5本）
+      listContainer.innerHTML = '';
+      const showCount = Math.min(upcoming.length, 5);
+      for (let i = 0; i < showCount; i++) {
+        const item = upcoming[i];
+        const m = Math.floor(item.diffSec / 60);
+        const div = document.createElement('div');
+        div.className = `upcoming-item ${i === 0 ? 'first' : ''}`;
+        div.innerHTML = `
+          <span class="time">${i === 0 ? '▶ ' : ''}${item.timeStr} 発</span>
+          <span class="diff">あと ${m}分後</span>
+        `;
+        listContainer.appendChild(div);
+      }
+    }
+
+    // 初期化
+    setDayType(currentDayType);
+    updateUI();
+
+    // 毎秒更新
+    setInterval(updateUI, 1000);
+  </script>
+</body>
+
+</html>
